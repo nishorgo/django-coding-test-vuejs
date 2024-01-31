@@ -6,7 +6,7 @@ from config.g_model import TimeStampMixin
 class Variant(TimeStampMixin):
     title = models.CharField(max_length=40, unique=True)
     description = models.TextField()
-    active = models.BooleanField(default=True)
+    active = models.BooleanField(default=True)    
 
 
 class Product(TimeStampMixin):
@@ -18,7 +18,7 @@ class Product(TimeStampMixin):
 class ProductImage(TimeStampMixin):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     file_path = models.URLField()
-
+    thumbnail = models.SmallIntegerField(null=True)
 
 class ProductVariant(TimeStampMixin):
     variant_title = models.CharField(max_length=255)
@@ -34,5 +34,5 @@ class ProductVariantPrice(TimeStampMixin):
     product_variant_three = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, null=True,
                                               related_name='product_variant_three')
     price = models.FloatField()
-    stock = models.FloatField()
+    stock = models.IntegerField()
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
