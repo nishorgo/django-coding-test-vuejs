@@ -6,6 +6,8 @@ from operator import itemgetter
 from itertools import groupby
 
 from product.models import Variant, Product, ProductVariant
+from product.serializers import ProductSerializer, VariantSerializer, ProductVariantSerializer, ProductVariantPriceSerializer, ProductImageSerializer
+from rest_framework.generics import get_object_or_404, UpdateAPIView
 
 
 class CreateProductView(generic.TemplateView):
@@ -124,3 +126,70 @@ class ProductListView(generic.ListView):
             return render(request, self.template_name, context)
 
         return redirect('list.product')
+    
+
+
+class ProductCreateUpdateAPIView(UpdateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    def get_object(self):
+        return get_object_or_404(Product, pk=self.kwargs['pk'])
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+
+        # Update associated objects
+        variant_data = {
+            'variant_title': self.request.data.get('variant_title'),
+            'variant': {
+                'title': self.request.data.get('variant_title'),
+                'description': self.request.data.get('variant_description'),
+                'active': True 
+            },
+            'product': instance.id
+        }
+
+        variant_instance = instance.productvariant
+        if variant_instance:
+            variant_serializer = ProductVariantSerializer(variant_instance, data=variant_data, partial=True)
+            if variant_serializer.is_valid():
+                variant_serializer.save()
+        else:
+            variant_serializer = ProductVariantSerializer(data=variant_data)
+            if variant_serializer.is_valid():
+                variant_instance = variant_serializer.save()
+
+        # Update ProductVariantPrice
+        price_instance = variant_instance.productvariantprice
+        price_data = {
+            'product_variant': variant_instance.id,
+            'price': self.request.data.get('price'),
+            'stock': self.request.data.get('stock')
+        }
+
+        if price_instance:
+            price_serializer = ProductVariantPriceSerializer(price_instance, data=price_data, partial=True)
+            if price_serializer.is_valid():
+                price_serializer.save()
+        else:
+            price_serializer = ProductVariantPriceSerializer(data=price_data)
+            if price_serializer.is_valid():
+                price_serializer.save()
+
+        # Update ProductImage
+        image_instance = instance.productimage
+        image_data = {
+            'product': instance.id,
+            'file_path': self.request.data.get('image_file_path'),
+            'thumbnail': self.request.data.get('thumbnail')
+        }
+
+        if image_instance:
+            image_serializer = ProductImageSerializer(image_instance, data=image_data, partial=True)
+            if image_serializer.is_valid():
+                image_serializer.save()
+        else:
+            image_serializer = ProductImageSerializer(data=image_data)
+            if image_serializer.is_valid():
+                image_serializer.save()
